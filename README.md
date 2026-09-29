@@ -4,6 +4,8 @@ Android app for car-carrier drivers: create a trip, enter lot numbers, shoot sev
 offline-safely to Supabase. Spec: [`plan.md`](plan.md). Styling: [`theme.ts`](theme.ts). Photo capture, widest-lens
 and volume-shutter code is adapted from the sibling app `tripTrack`.
 
+**Learning the codebase:** read [`docs/DEVELOPER_GUIDE.md`](docs/DEVELOPER_GUIDE.md).
+
 ## Setup
 
 ```bash
