@@ -71,5 +71,8 @@ module.exports = {
       'SUPABASE_PUBLISHABLE_KEY',
       'SUPABASE_ANON_KEY',
     ),
+    eas: {
+      projectId: '8b8b1a18-309d-46d3-9a61-1389bd9cdd52',
+    },
   },
 };
