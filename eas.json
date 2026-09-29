@@ -10,20 +10,14 @@
       "android": {
         "buildType": "apk"
       },
-      "env": {
-        "EXPO_PUBLIC_SUPABASE_URL": "https://db.lasfotos.app",
-        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_l7xbQmtItSu6ld3QgG49KX_m_mjSngd"
-      }
+      "environment": "development"
     },
     "preview": {
       "distribution": "internal",
       "android": {
         "buildType": "apk"
       },
-      "env": {
-        "EXPO_PUBLIC_SUPABASE_URL": "https://db.lasfotos.app",
-        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_l7xbQmtItSu6ld3QgG49KX_m_mjSngd"
-      }
+      "environment": "preview"
     }
   }
 }
