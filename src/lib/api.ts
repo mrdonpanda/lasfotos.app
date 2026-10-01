@@ -1,5 +1,6 @@
 import { type Angle } from './angles';
 import { isValidLotNumber, PHOTOS_BUCKET, photoObjectPath, tripPrefix, WaitingForLotNumber } from './lotPhotos';
+import { MAX_CAR_NOTE, MAX_TRIP_NOTE } from './notes';
 import { requireOnline } from './network';
 import { supabase } from './supabase';
 
@@ -8,6 +9,7 @@ export type Trip = {
   location_name: string;
   trip_date: string;
   created_at: string;
+  notes: string | null;
 };
 
 export type TripSummary = Trip & { carCount: number; lotCount: number; photoCount: number };
@@ -18,6 +20,7 @@ export type Car = {
   user_id: string;
   position: number;
   lot_number: string | null;
+  notes: string | null;
 };
 
 export type PhotoRow = {
@@ -36,7 +39,7 @@ function fail(error: { message: string; code?: string } | null, fallback: string
 export async function listTrips(): Promise<TripSummary[]> {
   const { data, error } = await supabase
     .from('trips')
-    .select('id, location_name, trip_date, created_at, cars(id, lot_number, photos(id))')
+    .select('id, location_name, trip_date, created_at, notes, cars(id, lot_number, photos(id))')
     .order('trip_date', { ascending: false })
     .order('created_at', { ascending: false });
   fail(error, 'Could not load trips');
@@ -52,7 +55,7 @@ export async function listTrips(): Promise<TripSummary[]> {
 export async function getTrip(tripId: string): Promise<Trip> {
   const { data, error } = await supabase
     .from('trips')
-    .select('id, location_name, trip_date, created_at')
+    .select('id, location_name, trip_date, created_at, notes')
     .eq('id', tripId)
     .maybeSingle();
   fail(error, 'Could not load the trip');
@@ -118,7 +121,7 @@ export async function removeObjects(paths: string[]): Promise<void> {
 export async function listCars(tripId: string): Promise<Car[]> {
   const { data, error } = await supabase
     .from('cars')
-    .select('id, trip_id, user_id, position, lot_number')
+    .select('id, trip_id, user_id, position, lot_number, notes')
     .eq('trip_id', tripId)
     .order('position');
   fail(error, 'Could not load cars');
@@ -209,3 +212,25 @@ export async function setLotNumber(car: Car, userId: string, rawLot: string): Pr
 }
 
 export { WaitingForLotNumber };
+
+
+// ---------------------------------------------------------------- notes
+
+/** Empty/whitespace-only notes are stored as NULL. */
+function noteValue(text: string, max: number): string | null {
+  const value = text.trim();
+  if (value.length > max) throw new Error(`Notes can be at most ${max} characters`);
+  return value === '' ? null : value;
+}
+
+export async function saveTripNotes(tripId: string, text: string): Promise<void> {
+  await requireOnline();
+  const { error } = await supabase.from('trips').update({ notes: noteValue(text, MAX_TRIP_NOTE) }).eq('id', tripId);
+  fail(error, 'Could not save the trip note');
+}
+
+export async function saveCarNotes(carId: string, text: string): Promise<void> {
+  await requireOnline();
+  const { error } = await supabase.from('cars').update({ notes: noteValue(text, MAX_CAR_NOTE) }).eq('id', carId);
+  fail(error, 'Could not save the lot note');
+}

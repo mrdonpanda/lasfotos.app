@@ -56,6 +56,8 @@ export const fontSize = {
   title: 28,
   heading: 34,
   lot: 44, // lot numbers: biggest thing on screen
+  note: 14, // compact one-line previews of notes (still readable in sunlight)
+  tileLabel: 12,
 } as const;
 
 export const fontWeight = {
@@ -83,7 +85,7 @@ export const touch = {
   min: 64,
   button: 72,
   shutter: 88,
-  angleTile: 88,
+  angleTile: 66, // 25% smaller than the original 88: 4 per row, 2 rows instead of 3 (still above the 64 glove minimum)
   hitSlop: { top: 12, bottom: 12, left: 12, right: 12 },
 } as const;
 
@@ -154,6 +156,25 @@ export const components = {
   },
 } as const;
 
+/** Angle tile internals (state is shown by icon + border + fill, never color alone). */
+export const angleTile = {
+  size: touch.angleTile,
+  iconSize: 21,
+  labelSize: fontSize.tileLabel,
+  gap: spacing.sm,
+} as const;
+
+/** Notes (trip + lot): inputs, status line and quick-note chips. */
+export const notes = {
+  tripInputMinHeight: 96,
+  inputFontSize: fontSize.body,
+  previewFontSize: fontSize.note,
+  chipMinHeight: touch.min,
+  chipFontSize: fontSize.label,
+  statusFontSize: fontSize.note,
+  iconSize: 28,
+} as const;
+
 export const camera = {
   headerBg: colors.overlay,
   headerText: { ...typography.title, fontWeight: fontWeight.black },
@@ -163,7 +184,7 @@ export const camera = {
 
 export const theme = {
   colors, spacing, radius, borderWidth, fontSize, fontWeight,
-  typography, touch, angles, angleState, components, camera,
+  typography, touch, angles, angleState, angleTile, notes, components, camera,
 } as const;
 
 export default theme;

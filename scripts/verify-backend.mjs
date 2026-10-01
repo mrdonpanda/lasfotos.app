@@ -120,6 +120,26 @@ try {
   const bDel = await b.client.from('trips').delete().eq('id', trip.id);
   const still = await a.client.from('trips').select('id').eq('id', trip.id);
   check('user B cannot delete A\'s trip', !bDel.error && still.data.length === 1);
+  // notes (migration 20260929230000_notes.sql)
+  const tNote = await a.client.from('trips').update({ notes: 'Gate code 4411\nCall Sam' }).eq('id', trip.id);
+  const tRead = await a.client.from('trips').select('notes').eq('id', trip.id).single();
+  check('trip notes save and read back (multi-line)', !tNote.error && tRead.data?.notes === 'Gate code 4411\nCall Sam', tNote.error?.message);
+  const cNote = await a.client.from('cars').update({ notes: 'No keys; No catalytic' }).eq('id', cars[0].id);
+  const cRead = await a.client.from('cars').select('notes').eq('id', cars[0].id).single();
+  check('lot notes save and read back', !cNote.error && cRead.data?.notes === 'No keys; No catalytic', cNote.error?.message);
+  const clear = await a.client.from('cars').update({ notes: null }).eq('id', cars[0].id);
+  check('a note can be cleared (NULL)', !clear.error);
+  const longCar = await a.client.from('cars').update({ notes: 'x'.repeat(201) }).eq('id', cars[0].id);
+  check('lot note over 200 chars is rejected', !!longCar.error, longCar.error?.code);
+  const longTrip = await a.client.from('trips').update({ notes: 'x'.repeat(2001) }).eq('id', trip.id);
+  check('trip note over 2000 chars is rejected', !!longTrip.error, longTrip.error?.code);
+  const maxCar = await a.client.from('cars').update({ notes: 'x'.repeat(200) }).eq('id', cars[0].id);
+  check('lot note of exactly 200 chars is accepted', !maxCar.error);
+  await b.client.from('cars').update({ notes: 'hacked' }).eq('id', cars[1].id);
+  await b.client.from('trips').update({ notes: 'hacked' }).eq('id', trip.id);
+  const intact = await a.client.from('trips').select('notes').eq('id', trip.id).single();
+  const intactCar = await a.client.from('cars').select('notes').eq('id', cars[1].id).single();
+  check("user B cannot change A's notes", intact.data?.notes === 'Gate code 4411\nCall Sam' && intactCar.data?.notes === null);
   const anon = await newClient().from('trips').select('id');
   check('anon role has no access to trips', !!anon.error || anon.data.length === 0, JSON.stringify(anon.data));
 

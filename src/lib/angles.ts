@@ -1,11 +1,11 @@
 export const ANGLES = [
-  { id: 'top', label: 'Top' },
-  { id: 'front', label: 'Front' },
-  { id: 'driver_side', label: 'Driver side' },
-  { id: 'back', label: 'Back' },
-  { id: 'passenger_side', label: 'Passenger side' },
-  { id: 'keys', label: 'Keys' },
-  { id: 'under_vehicle', label: 'Under vehicle' },
+  { id: 'top', label: 'Top', short: 'Top' },
+  { id: 'front', label: 'Front', short: 'Front' },
+  { id: 'driver_side', label: 'Driver side', short: 'Driver' },
+  { id: 'back', label: 'Back', short: 'Back' },
+  { id: 'passenger_side', label: 'Passenger side', short: 'Pass.' },
+  { id: 'keys', label: 'Keys', short: 'Keys' },
+  { id: 'under_vehicle', label: 'Under vehicle', short: 'Under' },
 ] as const;
 
 export type Angle = (typeof ANGLES)[number]['id'];

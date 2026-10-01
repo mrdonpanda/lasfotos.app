@@ -899,3 +899,36 @@ setUrls(await signedUrls(nextPhotos.map((p) => p.storage_path)));               
 | "Sign-in says the URL/key are missing." | Expo dashboard variables and the profile's `environment` in `eas.json` |
 | "Change the look." | `theme.ts` only; components don't hardcode colors or sizes |
 | "Change how a file is named." | `photoObjectPath` in `lotPhotos.ts` and the storage-path section of the migration |
+
+
+---
+
+## 6. Notes (trip notes and lot notes)
+
+Two nullable text columns: `trips.notes` (max 2000 chars) and `cars.notes` (max 200), added by
+`supabase/migrations/20260929230000_notes.sql`. They are plain metadata: no storage paths depend on them, and the existing
+RLS policies already cover them because those policies are row-level (`user_id = auth.uid()`).
+
+**Autosave** (`src/lib/autosave.ts`, hook `src/lib/useAutosave.ts`). `Autosaver` is a small framework-free class:
+
+```ts
+saver.change(text);   // every keystroke: remember the text, restart an 800 ms timer
+saver.flush();        // save NOW: used on blur, on Done, and when the component unmounts
+```
+
+Rules it enforces (all unit-tested in `__tests__/notes.test.ts`): nothing is written when the text equals what is stored;
+only one save runs at a time and text typed during a save is saved right after; a failed save reports `error` and is
+retried only by the next edit or a tap on "Not saved, tap to retry" (no endless retry loop). Flushing on unmount matters
+because `onBlur` does not fire when the driver taps Back with the keyboard open.
+
+**UI.** The trip note is a multiline `NoteField` under the trip header. A lot note is shown as a one-line preview (and a
+note icon on the car row); tapping opens `NoteModal` with a single-line `NoteField` plus quick-note chips
+(`QUICK_NOTES` in `src/lib/notes.ts`; edit that array to change the chips). Notes need a connection like other edits;
+if offline the status line shows "Not saved" and retries on tap.
+
+**WhatsApp (web app).** The lot note is added to the caption of the first photo of each car only:
+`123456 Top - No keys; No catalytic`. See `web-app/web/src/lib/dispatch/plan.ts`.
+
+**Angle tiles.** `touch.angleTile` is now 66 (was 88): four tiles per row, two rows instead of three, still above the 64 px
+glove minimum. Labels are 12 px, so the tile shows a short name (`Pass.` for Passenger side, `Driver`, `Under`); the full name is
+read by screen readers and shown in the camera header. State is shown by icon + border + fill, not by a caption.

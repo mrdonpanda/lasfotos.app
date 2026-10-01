@@ -6,17 +6,18 @@ import { useFocusEffect } from 'expo-router';
 import { colors, components, radius, spacing, typography } from '../../../../theme';
 import { BackButton, BigButton, Body, ErrorText, Loading, PendingBanner, Screen, Title } from '../../../../src/components/ui';
 import { angleLabel, ANGLES, type Angle } from '../../../../src/lib/angles';
-import { listCars, listTripPhotos, type Car, type PhotoRow } from '../../../../src/lib/api';
+import { getTrip, listCars, listTripPhotos, type Car, type PhotoRow } from '../../../../src/lib/api';
 import { signedUrls } from '../../../../src/lib/photos';
 import { useUploadJobs, useUploadQueue } from '../../../../src/lib/queueContext';
 
-type Shot = { key: string; carId: string; lot: string; angle: Angle; uri: string | null; pending: boolean };
+type Shot = { key: string; carId: string; lot: string; note: string; angle: Angle; uri: string | null; pending: boolean };
 
 export default function GalleryScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const queue = useUploadQueue();
   const jobs = useUploadJobs();
   const { width } = useWindowDimensions();
+  const [tripNote, setTripNote] = useState('');
   const [cars, setCars] = useState<Car[]>([]);
   const [photos, setPhotos] = useState<PhotoRow[]>([]);
   const [urls, setUrls] = useState<Record<string, string>>({});
@@ -26,7 +27,8 @@ export default function GalleryScreen() {
 
   const load = useCallback(async () => {
     try {
-      const [nextCars, nextPhotos] = await Promise.all([listCars(id), listTripPhotos(id)]);
+      const [nextTrip, nextCars, nextPhotos] = await Promise.all([getTrip(id), listCars(id), listTripPhotos(id)]);
+      setTripNote(nextTrip.notes ?? '');
       setCars(nextCars);
       setPhotos(nextPhotos);
       setUrls(await signedUrls(nextPhotos.map((p) => p.storage_path)));
@@ -48,6 +50,7 @@ export default function GalleryScreen() {
 
   const shots = useMemo<Shot[]>(() => {
     const lotByCar = new Map(cars.map((car) => [car.id, car.lot_number ?? `Car ${car.position}`]));
+    const noteByCar = new Map(cars.map((car) => [car.id, car.notes ?? '']));
     const pendingByKey = new Map(
       jobs.filter((job) => job.tripId === id).map((job) => [`${job.carId}:${job.angle}`, job]),
     );
@@ -58,9 +61,9 @@ export default function GalleryScreen() {
         const job = pendingByKey.get(key);
         const photo = photos.find((p) => p.car_id === car.id && p.angle === angle.id);
         if (job) {
-          out.push({ key, carId: car.id, lot: lotByCar.get(car.id) ?? '', angle: angle.id, uri: job.localUri, pending: true });
+          out.push({ key, carId: car.id, lot: lotByCar.get(car.id) ?? '', note: noteByCar.get(car.id) ?? '', angle: angle.id, uri: job.localUri, pending: true });
         } else if (photo) {
-          out.push({ key, carId: car.id, lot: lotByCar.get(car.id) ?? '', angle: angle.id, uri: urls[photo.storage_path] ?? null, pending: false });
+          out.push({ key, carId: car.id, lot: lotByCar.get(car.id) ?? '', note: noteByCar.get(car.id) ?? '', angle: angle.id, uri: urls[photo.storage_path] ?? null, pending: false });
         }
       }
     }
@@ -75,6 +78,12 @@ export default function GalleryScreen() {
       <BackButton label="Trip" />
       <PendingBanner />
       <Title>Review</Title>
+      {tripNote ? (
+        <View style={[components.card, { gap: spacing.xs }]}>
+          <Text style={typography.label}>Trip notes</Text>
+          <Text style={typography.body}>{tripNote}</Text>
+        </View>
+      ) : null}
       {error ? <ErrorText>{error}</ErrorText> : null}
       {shots.length === 0 ? <Body muted>No photos yet.</Body> : null}
       <FlatList
@@ -118,6 +127,11 @@ export default function GalleryScreen() {
                     LOT {item.lot} | {angleLabel(item.angle).toUpperCase()}
                     {item.pending ? ' (pending)' : ''}
                   </Text>
+                  {item.note ? (
+                    <Text style={[typography.body, { textAlign: 'center', color: colors.accent, marginTop: spacing.xs }]}>
+                      Note: {item.note}
+                    </Text>
+                  ) : null}
                 </View>
               )}
             />

@@ -1,15 +1,27 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronDown, ChevronUp, Images, Pencil } from 'lucide-react-native';
+import { ChevronDown, ChevronUp, Images, NotebookPen, Pencil, StickyNote } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Modal, Pressable, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, Text, TextInput, View } from 'react-native';
 
-import { colors, components, radius, spacing, touch, typography } from '../../../../theme';
+import { colors, components, notes as noteTokens, radius, spacing, touch, typography } from '../../../../theme';
 import { AngleTile, type TileState } from '../../../../src/components/AngleTile';
+import { NoteField } from '../../../../src/components/NoteField';
 import { BackButton, BigButton, Body, ErrorText, Loading, PendingBanner, Screen, Title } from '../../../../src/components/ui';
 import { ANGLES, nextMissingAngle, photoKey, type Angle } from '../../../../src/lib/angles';
-import { getTrip, listCars, listTripPhotos, setLotNumber, type Car, type PhotoRow, type Trip } from '../../../../src/lib/api';
+import {
+  getTrip,
+  listCars,
+  listTripPhotos,
+  saveCarNotes,
+  saveTripNotes,
+  setLotNumber,
+  type Car,
+  type PhotoRow,
+  type Trip,
+} from '../../../../src/lib/api';
 import { useAuth } from '../../../../src/lib/auth';
 import { formatTripDay } from '../../../../src/lib/dates';
+import { MAX_CAR_NOTE, MAX_TRIP_NOTE, notePreview, QUICK_NOTES } from '../../../../src/lib/notes';
 import { useUploadJobs, useUploadQueue } from '../../../../src/lib/queueContext';
 
 export default function TripWorkspace() {
@@ -27,6 +39,7 @@ export default function TripWorkspace() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [autoExpanded, setAutoExpanded] = useState(false);
   const [editing, setEditing] = useState<Car | null>(null);
+  const [noting, setNoting] = useState<Car | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -117,6 +130,15 @@ export default function TripWorkspace() {
           <Pencil color={colors.text} size={30} />
         </Pressable>
       </View>
+      <NoteField
+        key={trip.id}
+        label="Trip notes"
+        initial={trip.notes ?? ''}
+        maxLength={MAX_TRIP_NOTE}
+        multiline
+        placeholder="Gate code, yard contact, anything to remember…"
+        save={(text) => saveTripNotes(id, text)}
+      />
       {error ? <ErrorText>{error}</ErrorText> : null}
 
       {cars.map((car) => {
@@ -125,28 +147,52 @@ export default function TripWorkspace() {
         const complete = isComplete(car);
         return (
           <View key={car.id} style={[components.card, { gap: spacing.md, borderColor: complete ? colors.accent : colors.borderMuted }]}>
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => (car.lot_number ? setExpanded(open ? null : car.id) : setEditing(car))}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: touch.min }}
-            >
-              <Text style={[typography.label, { width: 32 }]}>{car.position}</Text>
-              {car.lot_number ? (
-                <View style={{ flex: 1 }}>
-                  <Text style={typography.lot}>{car.lot_number}</Text>
-                  <Text style={typography.label}>
-                    {done.size}/{ANGLES.length} photos{complete ? ' · Done ✓' : ''}
-                  </Text>
-                </View>
-              ) : (
-                <View style={[components.lotPlaceholder, { flex: 1 }]}>
-                  <Text style={[typography.button, { color: colors.accent }]}>TAP TO ENTER LOT #</Text>
-                </View>
-              )}
-              {car.lot_number ? (
-                open ? <ChevronUp color={colors.text} size={32} /> : <ChevronDown color={colors.text} size={32} />
-              ) : null}
-            </Pressable>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => (car.lot_number ? setExpanded(open ? null : car.id) : setEditing(car))}
+                style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: touch.min }}
+              >
+                <Text style={[typography.label, { width: 32 }]}>{car.position}</Text>
+                {car.lot_number ? (
+                  <View style={{ flex: 1 }}>
+                    <Text style={typography.lot}>{car.lot_number}</Text>
+                    <Text style={typography.label}>
+                      {done.size}/{ANGLES.length} photos{complete ? ' · Done ✓' : ''}
+                    </Text>
+                  </View>
+                ) : (
+                  <View style={[components.lotPlaceholder, { flex: 1 }]}>
+                    <Text style={[typography.button, { color: colors.accent }]}>TAP TO ENTER LOT #</Text>
+                  </View>
+                )}
+                {car.lot_number ? (
+                  open ? <ChevronUp color={colors.text} size={32} /> : <ChevronDown color={colors.text} size={32} />
+                ) : null}
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={car.notes ? `Edit lot note: ${car.notes}` : 'Add lot note'}
+                onPress={() => setNoting(car)}
+                style={{ width: touch.min, height: touch.min, alignItems: 'center', justifyContent: 'center' }}
+              >
+                {car.notes ? (
+                  <StickyNote color={colors.accent} size={noteTokens.iconSize} />
+                ) : (
+                  <NotebookPen color={colors.textMuted} size={noteTokens.iconSize} />
+                )}
+              </Pressable>
+            </View>
+            {car.notes ? (
+              <Pressable accessibilityRole="button" accessibilityLabel="Edit lot note" onPress={() => setNoting(car)}>
+                <Text
+                  numberOfLines={1}
+                  style={{ color: colors.accent, fontSize: noteTokens.previewFontSize, fontWeight: '700' }}
+                >
+                  Note: {notePreview(car.notes)}
+                </Text>
+              </Pressable>
+            ) : null}
 
             {car.lot_number && open ? (
               <>
@@ -155,6 +201,7 @@ export default function TripWorkspace() {
                     <AngleTile
                       key={angle.id}
                       label={angle.label}
+                      shortLabel={angle.short}
                       state={tileState(car, angle.id)}
                       onPress={() => shoot(car, angle.id)}
                     />
@@ -182,6 +229,14 @@ export default function TripWorkspace() {
         );
       })}
 
+      <NoteModal
+        car={noting}
+        onClose={() => setNoting(null)}
+        onSaved={(carId, text) =>
+          setCars((prev) => prev.map((c) => (c.id === carId ? { ...c, notes: text.trim() === '' ? null : text.trim() } : c)))
+        }
+      />
+
       <LotModal
         car={editing}
         userId={userId}
@@ -194,6 +249,46 @@ export default function TripWorkspace() {
         }}
       />
     </Screen>
+  );
+}
+
+function NoteModal({
+  car,
+  onClose,
+  onSaved,
+}: {
+  car: Car | null;
+  onClose: () => void;
+  onSaved: (carId: string, text: string) => void;
+}) {
+  return (
+    <Modal visible={car !== null} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', padding: spacing.md }}>
+          <View style={{ backgroundColor: colors.surfaceRaised, borderRadius: radius.lg, borderWidth: 3, borderColor: colors.accent, padding: spacing.md, gap: spacing.md }}>
+            <Text style={typography.title}>
+              Car {car?.position}
+              {car?.lot_number ? ` · lot ${car.lot_number}` : ''} · note
+            </Text>
+            {car ? (
+              <NoteField
+                key={car.id}
+                initial={car.notes ?? ''}
+                maxLength={MAX_CAR_NOTE}
+                placeholder="e.g. No keys"
+                autoFocus
+                chips={QUICK_NOTES}
+                save={async (text) => {
+                  await saveCarNotes(car.id, text);
+                  onSaved(car.id, text);
+                }}
+              />
+            ) : null}
+            <BigButton label="Done" onPress={onClose} />
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
   );
 }
 

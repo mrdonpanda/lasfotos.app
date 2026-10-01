@@ -1,7 +1,7 @@
 import { Camera, Check, CloudUpload, RefreshCw } from 'lucide-react-native';
 import { Pressable, Text } from 'react-native';
 
-import { angleState, colors, radius, spacing, touch } from '../../theme';
+import { angleState, angleTile, radius, spacing } from '../../theme';
 
 export type TileState = 'empty' | 'captured' | 'uploading' | 'failed';
 
@@ -12,19 +12,24 @@ const ICONS = {
   failed: RefreshCw,
 } as const;
 
-const CAPTIONS: Record<TileState, string> = {
-  empty: '',
-  captured: 'Saved',
-  uploading: 'Sending',
-  failed: 'Retrying',
+/** Spoken state (screen readers). The tile itself shows state with icon + border + fill. */
+const SPOKEN: Record<TileState, string> = {
+  empty: 'not taken',
+  captured: 'saved',
+  uploading: 'sending',
+  failed: 'failed, tap to retry',
 };
 
 export function AngleTile({
   label,
+  shortLabel,
   state,
   onPress,
 }: {
+  /** Full name, spoken by screen readers. */
   label: string;
+  /** Fits the 66px tile at 12px ("Pass." for Passenger side). */
+  shortLabel: string;
   state: TileState;
   onPress: () => void;
 }) {
@@ -33,11 +38,11 @@ export function AngleTile({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${label}, ${state === 'empty' ? 'not taken' : CAPTIONS[state]}`}
+      accessibilityLabel={`${label}, ${SPOKEN[state]}`}
       onPress={onPress}
       style={({ pressed }) => ({
-        width: touch.angleTile,
-        minHeight: touch.angleTile,
+        width: angleTile.size,
+        height: angleTile.size,
         borderRadius: radius.md,
         borderWidth: 3,
         borderColor: look.border,
@@ -46,18 +51,19 @@ export function AngleTile({
         justifyContent: 'center',
         gap: spacing.xs,
         padding: spacing.xs,
+        overflow: 'hidden',
         opacity: pressed ? 0.75 : 1,
       })}
     >
-      <Icon color={look.fg} size={28} />
-      <Text style={{ color: look.fg, fontSize: 13, fontWeight: '900', textAlign: 'center' }} numberOfLines={2}>
-        {label.toUpperCase()}
+      <Icon color={look.fg} size={angleTile.iconSize} />
+      <Text
+        style={{ color: look.fg, fontSize: angleTile.labelSize, fontWeight: '900', textAlign: 'center' }}
+        numberOfLines={2}
+        adjustsFontSizeToFit
+        minimumFontScale={0.8}
+      >
+        {shortLabel.toUpperCase()}
       </Text>
-      {CAPTIONS[state] ? (
-        <Text style={{ color: state === 'captured' ? colors.textOnAccent : look.fg, fontSize: 11, fontWeight: '700' }}>
-          {CAPTIONS[state]}
-        </Text>
-      ) : null}
     </Pressable>
   );
 }
