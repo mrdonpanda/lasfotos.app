@@ -38,6 +38,15 @@ module.exports = {
   plugins: [
     'expo-router',
     'expo-status-bar',
+    [
+      'expo-splash-screen',
+      {
+        image: './assets/splash-icon.png',
+        imageWidth: 240,
+        backgroundColor: '#000000',
+        resizeMode: 'contain',
+      },
+    ],
     '@react-native-community/datetimepicker',
     [
       'expo-camera',
@@ -63,7 +72,7 @@ module.exports = {
     adaptiveIcon: { foregroundImage: './assets/adaptive-icon.png', backgroundColor: '#000000' },
     permissions: ['android.permission.CAMERA'],
   },
-  web: { bundler: 'metro' },
+  web: { bundler: 'metro', favicon: './assets/favicon.png' },
   extra: {
     supabaseUrl: envValue('EXPO_PUBLIC_SUPABASE_URL', 'SUPABASE_URL'),
     supabasePublishableKey: envValue(
