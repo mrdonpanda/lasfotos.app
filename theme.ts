@@ -175,6 +175,21 @@ export const notes = {
   iconSize: 28,
 } as const;
 
+/**
+ * Text stamped into the pixels of every photo ("123456 Front"), bottom right. White bold text on a
+ * 70% black box plus a black shadow: readable on snow, asphalt, and glare. Sizes scale with the image.
+ */
+export const watermark = {
+  textColor: colors.text,
+  boxColor: '#000000B3', // RRGGBBAA
+  shadowColor: '#000000',
+  fontScale: 0.03, // of the longest edge: 48 px on a 1600 px photo
+  boxPaddingXScale: 0.4, // of the font size
+  boxPaddingYScale: 0.25,
+  insetScale: 0.6, // distance from the right/bottom edges, of the font size
+  jpegQuality: 80, // 0-100, the single lossy encode of the pipeline
+} as const;
+
 export const camera = {
   headerBg: colors.overlay,
   headerText: { ...typography.title, fontWeight: fontWeight.black },
@@ -184,7 +199,7 @@ export const camera = {
 
 export const theme = {
   colors, spacing, radius, borderWidth, fontSize, fontWeight,
-  typography, touch, angles, angleState, angleTile, notes, components, camera,
+  typography, touch, angles, angleState, angleTile, notes, watermark, components, camera,
 } as const;
 
 export default theme;

@@ -4,6 +4,7 @@ import { useEffect, useMemo, type ReactNode } from 'react';
 import { AppState } from 'react-native';
 
 import { compressPhoto } from './compress';
+import { watermarkText } from './watermark';
 import { localCopyName } from './lotPhotos';
 import { saveToPhotoAlbum } from './deviceAlbum';
 import { uploadJpeg } from './photos';
@@ -33,7 +34,7 @@ function asyncStorageQueue(userId: string): QueueStorage {
 
 export function createAppUploadQueue(userId: string) {
   return createUploadQueue({
-    compress: (job) => compressPhoto(job.localUri, job.width, job.height),
+    compress: (job) => compressPhoto(job.localUri, job.width, job.height, watermarkText(job.lotNumber, job.angle)),
     saveLocal: async (job, jpegUri) => {
       if (!(await getLocalCopyEnabled())) return;
       await saveToPhotoAlbum(jpegUri, localCopyName(job.lotNumber ?? '', job.angle));

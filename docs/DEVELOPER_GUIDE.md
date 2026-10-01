@@ -932,3 +932,29 @@ if offline the status line shows "Not saved" and retries on tap.
 **Angle tiles.** `touch.angleTile` is now 66 (was 88): four tiles per row, two rows instead of three, still above the 64 px
 glove minimum. Labels are 12 px, so the tile shows a short name (`Pass.` for Passenger side, `Driver`, `Under`); the full name is
 read by screen readers and shown in the camera header. State is shown by icon + border + fill, not by a caption.
+
+
+---
+
+## 7. Watermark ("123456 Front" stamped into every photo)
+
+The stamp is part of the pixels, so the copy in the `LasFotos` album, the file in the upload queue, and the file in
+Supabase are all the same watermarked JPEG. There is no un-stamped copy of a processed photo.
+
+```
+shutter -> raw capture (in the queue job)
+        -> compressPhoto():  expo-image-manipulator: resize to 1600 px (EXIF applied), quality 1.0
+                          -> react-native-image-marker: stamp "{lot} {Angle}" bottom right, encode JPEG q80  (the ONE lossy encode)
+                          -> copy into app storage (upload-queue/)
+        -> saveToPhotoAlbum()  (album copy)  -> upload
+```
+
+`src/lib/compress.ts` does the work; `src/lib/watermark.ts` builds the text (same words as the WhatsApp caption, full angle
+name) and the pixel sizes (font = 3% of the longest edge = 48 px on a 1600 px photo; box padding and edge inset scale
+with the font). Colors and scales live in `theme.ts` (`watermark`). Stamping happens in the queue's compress step
+(once per photo, never on retries), so neither the album nor the upload can see an un-stamped photo. If stamping throws (for
+example the native module is missing), the job fails and retries instead of storing an un-stamped photo.
+
+Limits: the lot number is burned in at the moment the photo is processed. Renaming a lot afterwards renames the stored files
+but cannot change the pixels, so photos taken under the old number keep it; retake them if that matters.
+The native module needs a new development build (`npx eas-cli build -p android --profile development`).
