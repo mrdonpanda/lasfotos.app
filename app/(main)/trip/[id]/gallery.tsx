@@ -27,9 +27,10 @@ function HeaderButton({ label, onPress }: { label: string; onPress: () => void }
         borderRadius: radius.lg,
         borderWidth: borderWidth.thick,
         borderColor: colors.border,
+        backgroundColor: 'transparent',
       }}
     >
-      <Text style={typography.button}>{label}</Text>
+      <Text style={[typography.button, { color: colors.text }]}>{label}</Text>
     </Pressable>
   );
 }
