@@ -958,3 +958,27 @@ example the native module is missing), the job fails and retries instead of stor
 Limits: the lot number is burned in at the moment the photo is processed. Renaming a lot afterwards renames the stored files
 but cannot change the pixels, so photos taken under the old number keep it; retake them if that matters.
 The native module needs a new development build (`npx eas-cli build -p android --profile development`).
+
+
+---
+
+## 8. Play Store release changes
+
+**No self sign-up.** `app/sign-in.tsx` only calls `supabase.auth.signInWithPassword`; the "Create account" button and
+`signUp` call are gone. Accounts are created by the administrator in Supabase Studio. A "Privacy Policy" link opens
+`https://lasfotos.app/privacy` (`PRIVACY_URL` in `src/lib/links.ts`) with `Linking.openURL`.
+Removing the button does not close signups on the server: set `GOTRUE_DISABLE_SIGNUP=true` in the Supabase auth service.
+
+**Sharing photos from the gallery** (`app/(main)/trip/[id]/gallery.tsx`, `src/lib/sharePhotos.ts`,
+`src/lib/selection.ts`). "Select" (or a long-press on a photo) turns on selection mode: tap photos to toggle them
+(a check icon and a yellow border), "Select all / Clear" and "Cancel" are in the header, and a "Share (N)" button appears at
+the bottom when at least one photo is selected. The Android back button leaves selection mode first.
+
+`sharePhotos()` puts every selected photo into one temporary folder `cache/share-<time>/` named `{lot}_{tag}.jpg`:
+photos still waiting in the upload queue are copied from their local file, uploaded ones are downloaded through their signed
+URL (the bucket is private). It then opens ONE Android share sheet for all of them.
+
+Why `react-native-share` and not `expo-sharing`: `expo-sharing`'s `shareAsync(url)` takes a single file. `react-native-share`
+sends `ACTION_SEND_MULTIPLE` with FileProvider URIs, so WhatsApp, Drive and email get all photos in one go.
+Temporary folders are deleted at the next share and when the gallery opens (not right after sharing: the receiving app may
+still be reading them). The shared files are the watermarked JPEGs.

@@ -1,9 +1,11 @@
 import { Redirect } from 'expo-router';
 import { useState } from 'react';
+import { Linking, Pressable, Text } from 'react-native';
 
-import { colors } from '../theme';
+import { touch, typography } from '../theme';
 import { BigButton, BigField, Body, ErrorText, Loading, Screen, Title } from '../src/components/ui';
 import { useAuth } from '../src/lib/auth';
+import { PRIVACY_URL } from '../src/lib/links';
 import { supabase, supabaseConfigured } from '../src/lib/supabase';
 
 export default function SignInScreen() {
@@ -11,7 +13,6 @@ export default function SignInScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   if (!ready) return <Loading label="Loading" />;
@@ -20,23 +21,13 @@ export default function SignInScreen() {
   async function signIn() {
     setBusy(true);
     setError(null);
-    setNotice(null);
     const { error: signInError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
     setBusy(false);
     if (signInError) setError(signInError.message);
   }
 
-  async function createAccount() {
-    setBusy(true);
-    setError(null);
-    setNotice(null);
-    const { data, error: signUpError } = await supabase.auth.signUp({ email: email.trim(), password });
-    setBusy(false);
-    if (signUpError) {
-      setError(signUpError.message);
-      return;
-    }
-    if (!data.session) setNotice('Check your email to confirm the account, then sign in.');
+  function openPrivacyPolicy() {
+    Linking.openURL(PRIVACY_URL).catch(() => setError('Could not open the privacy policy. Visit lasfotos.app/privacy in a browser.'));
   }
 
   return (
@@ -63,9 +54,16 @@ export default function SignInScreen() {
         placeholder="Password"
       />
       {error ? <ErrorText>{error}</ErrorText> : null}
-      {notice ? <Body>{notice}</Body> : null}
       <BigButton label={busy ? 'Working…' : 'Sign in'} onPress={() => void signIn()} disabled={busy} />
-      <BigButton label="Create account" tone="secondary" onPress={() => void createAccount()} disabled={busy} />
+      <Body muted>Accounts are created by your administrator.</Body>
+      <Pressable
+        accessibilityRole="link"
+        accessibilityLabel="Privacy Policy"
+        onPress={openPrivacyPolicy}
+        style={{ minHeight: touch.min, alignItems: 'center', justifyContent: 'center' }}
+      >
+        <Text style={[typography.label, { textDecorationLine: 'underline' }]}>Privacy Policy</Text>
+      </Pressable>
     </Screen>
   );
 }
